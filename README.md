@@ -22,12 +22,3 @@ pip install -r requirements.txt
 python3 scripts/01_gerar_dados_fake.py     # cria o OLTP simulado (Faker)
 python3 scripts/02_extracao_bronze.py       # extrai OLTP -> camada Bronze
 ```
-
-## Status
-
-- [x] Modelagem do banco (OLTP)
-- [x] Geração de dados sintéticos (Faker)
-- [x] Extração para camada Bronze
-- [ ] Transformação para camada Silver
-- [ ] Agregações para camada Gold
-- [ ] Escolha e configuração da hospedagem em nuvem
