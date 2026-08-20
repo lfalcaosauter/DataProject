@@ -8,17 +8,17 @@ Medallion (Bronze, Silver, Gold).
 
 ```
 DataProject/
-├── data/               # dados gerados (não versionado, ver .gitignore)
+├── data/              
 │   └── bronze/
-├── scripts/            # pipeline em Python, em ordem de execução
-├── sql/                # DDL e queries analíticas
-└── docs/               # documentação do projeto
+├── scripts/            
+├── sql/               
+└── docs/              
 ```
 
 ## Como rodar
 
 ```bash
 pip install -r requirements.txt
-python3 scripts/01_gerar_dados_fake.py     # cria o OLTP simulado (Faker)
-python3 scripts/02_extracao_bronze.py       # extrai OLTP -> camada Bronze
+python3 scripts/dados_fake.py     
+python3 scripts/bronze.py      
 ```
