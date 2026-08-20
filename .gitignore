@@ -1,0 +1,15 @@
+# Dados gerados/processados (reproduzíveis pelos scripts, não versionamos)
+data/
+
+# Ambiente Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Variáveis de ambiente / segredos
+.env
+
+# Arquivos de SO/editor
+.DS_Store
+.vscode/
