@@ -13,74 +13,64 @@ coluna de watermark (ex: MAX(Transacao_ID) ou Data_Hora ja processada) pra
 extrair so o que e novo desde a ultima execucao.
 """
 
-import sqlite3
+
 import os
-import uuid
-from datetime import datetime
-
+import random
+import sqlite3
+ 
 import pandas as pd
-
-DB_PATH = "bancosim.db"
-BRONZE_DIR = "bronze"
-
+ 
+DB_PATH = os.path.join("data", "oltp.db")
+BRONZE_DIR = os.path.join("data", "bronze")
+ 
 TABELAS = [
-    "Clientes",
-    "Agencias",
+    "Agencia",
+    "Cliente",
     "Contas",
-    "Cartoes",
-    "Tipos_Transacao",
-    "Transacoes",
+    "Cartao",
     "Emprestimos",
+    "Transacao_Tipo",
+    "Transacoes",
 ]
-
-
-def extrair_tabela(conn: sqlite3.Connection, tabela: str, lote_id: str, data_carga: str) -> pd.DataFrame:
-    """Le uma tabela inteira do OLTP e adiciona colunas de auditoria."""
-    df = pd.read_sql_query(f"SELECT * FROM {tabela}", conn)
-
-    # Colunas de auditoria: de onde veio e quando entrou na Bronze.
-    # Isso e o que permite, mais tarde, rastrear qualquer linha ate sua origem.
-    df["arquivo_origem"] = f"{DB_PATH}::{tabela}"
-    df["lote_id"] = lote_id
-    df["data_carga"] = data_carga
-
-    return df
-
-
-def salvar_bronze(df: pd.DataFrame, tabela: str) -> None:
-    """Salva em CSV e Parquet (Parquet é o formato preferido em produção:
-    mais compacto e guarda o tipo de cada coluna)."""
+ 
+NOME_ARQUIVO_BRONZE = {
+    "Agencia": "agencias_raw",
+    "Cliente": "clientes_raw",
+    "Contas": "contas_raw",
+    "Cartao": "cartoes_raw",
+    "Emprestimos": "emprestimos_raw",
+    "Transacao_Tipo": "tipos_transacao_raw",
+    "Transacoes": "transacoes_raw",
+}
+ 
+ 
+def extrair_tabela(conn: sqlite3.Connection, tabela: str) -> pd.DataFrame:
+    return pd.read_sql_query(f"SELECT * FROM {tabela}", conn)
+ 
+ 
+def main() -> None:
     os.makedirs(BRONZE_DIR, exist_ok=True)
-
-    caminho_csv = os.path.join(BRONZE_DIR, f"{tabela.lower()}_raw.csv")
-    caminho_parquet = os.path.join(BRONZE_DIR, f"{tabela.lower()}_raw.parquet")
-
-    df.to_csv(caminho_csv, index=False)
-    df.to_parquet(caminho_parquet, index=False)
-
-    print(f"  -> {tabela}: {len(df)} linhas ({caminho_csv} e {caminho_parquet})")
-
-
-def main():
-    if not os.path.exists(DB_PATH):
-        raise FileNotFoundError(
-            f"'{DB_PATH}' não encontrado. Rode antes o gerar_dados_fake.py "
-            "pra criar o banco OLTP."
-        )
-
-    lote_id = str(uuid.uuid4())         
-    data_carga = datetime.now().isoformat()
-
-    print(f"Iniciando extração (lote {lote_id})...")
+ 
     conn = sqlite3.connect(DB_PATH)
-
-    for tabela in TABELAS:
-        df = extrair_tabela(conn, tabela, lote_id, data_carga)
-        salvar_bronze(df, tabela)
-
-    conn.close()
-    print("\nExtração concluída. Dados disponíveis em ./bronze/")
-
-
+    try:
+        for tabela in TABELAS:
+            df = extrair_tabela(conn, tabela)
+ 
+            if tabela == "Transacoes":
+                random.seed(42)
+                n_duplicatas = max(1, int(len(df) * 0.01))
+                duplicatas = df.sample(n=n_duplicatas, random_state=42)
+                df = pd.concat([df, duplicatas], ignore_index=True)
+ 
+            nome_arquivo = NOME_ARQUIVO_BRONZE[tabela]
+            caminho = os.path.join(BRONZE_DIR, f"{nome_arquivo}.parquet")
+            df.to_parquet(caminho, index=False, engine="pyarrow")
+ 
+            print(f"[bronze.py] {tabela} -> {caminho} ({len(df)} linhas)")
+    finally:
+        conn.close()
+ 
+ 
 if __name__ == "__main__":
     main()
+ 
