@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  pipeline_bancario:
+    build: .
+    container_name: pipeline_medallion
+    volumes:
+      - .:/app
